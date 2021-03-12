@@ -35,7 +35,6 @@ function obtenerMaterial(type, color, myTexture) {
         color: color === undefined ? 'rgb(255, 255, 255)' : color,
         map: myTexture === undefined ? null : myTexture
     };
-
     switch (type) {
         case 'basic':
             return new THREE.MeshBasicMaterial(materialOptions);
