@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Planets and moons</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <div id="webgl"></div>
+        <script src="js/dat.gui.min.js"></script>
+        <script src="js/three.js"></script>
+        <script src="js/OrbitControls.js"></script>
+        <script >
+            var sun, moon, earth, earthOrbit, controls, scene, camera, renderer, scene;
+            var planetSegments = 48;
+            var sunData = constructPlanetData(0, 0, 0, "sun", "img/sun.jpg", 5, planetSegments);
+            var earthData = constructPlanetData(365.2564, 0, 25, "earth", "img/earth.jpg", 1, planetSegments);
+            var moonData = constructPlanetData(29.5, 0.01, 2.8, "moon", "img/moon.jpg", 0.5, planetSegments);
+            var orbitData = {value: 200, runOrbit: true, runRotation: true};
+
+function constructPlanetData(myOrbitRate, myRotationRate, myDistanceFromAxis, myName, myTexture, mySize, mySegments) {
+    return {
+        orbitRate: myOrbitRate
+        , rotationRate: myRotationRate
+        , distanceFromAxis: myDistanceFromAxis
+        , name: myName
+        , texture: myTexture
+        , size: mySize
+        , segments: mySegments
+    };
+}
+
+function obtenerMaterial(type, color, myTexture) {
+    var materialOptions = {
+        color: color === undefined ? 'rgb(255, 255, 255)' : color,
+        map: myTexture === undefined ? null : myTexture
+    };
+
+    switch (type) {
+        case 'basic':
+            return new THREE.MeshBasicMaterial(materialOptions);
+        case 'lambert':
+            return new THREE.MeshLambertMaterial(materialOptions);
+        case 'phong':
+            return new THREE.MeshPhongMaterial(materialOptions);
+        case 'standard':
+            return new THREE.MeshStandardMaterial(materialOptions);
+        default:
+            return new THREE.MeshBasicMaterial(materialOptions);
+    }
+}
+
+function definirEsfera(material, size, segments) {
+    var geometry = new THREE.SphereGeometry(size, segments, segments);
+    var obj = new THREE.Mesh(geometry, material);
+    return obj;
+}
+
+function cargarTexturaPlaneta(myData, x, y, z, myMaterialType) {
+    var myMaterial;
+    var passThisTexture;
+    if (myData.texture && myData.texture !== "") {
+        passThisTexture = new THREE.ImageUtils.loadTexture(myData.texture);
+    }
+    if (myMaterialType) {
+        myMaterial = obtenerMaterial(myMaterialType, "rgb(255, 255, 255 )", passThisTexture);
+    } else {
+        myMaterial = obtenerMaterial("lambert", "rgb(255, 255, 255 )", passThisTexture);
+    }
+
+    var myPlanet = definirEsfera(myMaterial, myData.size, myData.segments);
+    myPlanet.name = myData.name;
+    scene.add(myPlanet);
+    myPlanet.position.set(x, y, z);
+
+    return myPlanet;
+}
+
+function moverPlaneta(myPlanet, myData, myTime, stopRotation) {
+    if (orbitData.runRotation && !stopRotation) {
+        myPlanet.rotation.y += myData.rotationRate;
+    }
+    if (orbitData.runOrbit) {
+        myPlanet.position.x = Math.cos(myTime 
+                * (1.0 / (myData.orbitRate * orbitData.value)) + 10.0) 
+                * myData.distanceFromAxis;
+        myPlanet.position.z = Math.sin(myTime 
+                * (1.0 / (myData.orbitRate * orbitData.value)) + 10.0) 
+                * myData.distanceFromAxis;
+    }
+}
+
+function moverLuna(myMoon, myPlanet, myData, myTime) {
+    moverPlaneta(myMoon, myData, myTime);
+    if (orbitData.runOrbit) {
+        myMoon.position.x = myMoon.position.x + myPlanet.position.x;
+        myMoon.position.z = myMoon.position.z + myPlanet.position.z;
+    }
+}
+
+function update(renderer, scene, camera, controls) {
+    controls.update();
+
+    var time = Date.now();
+
+    moverPlaneta(earth, earthData, time);
+    moverLuna(moon, earth, moonData, time);
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(function () {
+        update(renderer, scene, camera, controls);
+    });
+}
+
+function init() {
+    camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000);
+    camera.position.z = 40;
+    camera.position.x = -40;
+    camera.position.y = 30;
+    camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+    scene = new THREE.Scene();
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    document.getElementById('webgl').appendChild(renderer.domElement);
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    scene.background = new THREE.TextureLoader().load( 'img/stars.jpg' );
+
+    var ambientLight = new THREE.AmbientLight(0xaaaaaa);
+    scene.add(ambientLight);
+
+    sun = cargarTexturaPlaneta(sunData, 0, 0, 0);
+    earth = cargarTexturaPlaneta(earthData, earthData.distanceFromAxis/15, 0, 0);
+    moon = cargarTexturaPlaneta(moonData, moonData.distanceFromAxis, 0, 0);
+    update(renderer, scene, camera, controls);
+}
+
+init();
+
+        </script>
+    </body>
+</html>
